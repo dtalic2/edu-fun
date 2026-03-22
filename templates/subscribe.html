@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Subscribe – EduFun{% endblock %}
+
+{% block content %}
+<h1 style="text-align:center; margin-bottom:2rem;">Start Your Subscription</h1>
+
+<div class="pricing-card">
+  <div class="price-big">${{ "%.2f"|format(price) }}</div>
+  <div class="price-sub">per month &bull; cancel any time</div>
+
+  <ul>
+    <li>Unlimited access to all videos</li>
+    <li>K-2, Grades 3–5, 6–8, 9–12</li>
+    <li>University-level content</li>
+    <li>Math, Science, History & more</li>
+    <li>New videos added regularly</li>
+    <li>Cancel any time, no commitment</li>
+  </ul>
+
+  <form method="POST">
+    <div class="form-group">
+      <label for="card_number">Card Number</label>
+      <input type="text" id="card_number" name="card_number" placeholder="4242 4242 4242 4242" maxlength="19" required />
+      <small style="color:var(--muted); font-size:.8rem;">Demo only — no real charges. Use any 13+ digit number.</small>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+      <div class="form-group">
+        <label for="expiry">Expiry</label>
+        <input type="text" id="expiry" name="expiry" placeholder="MM / YY" required />
+      </div>
+      <div class="form-group">
+        <label for="cvc">CVC</label>
+        <input type="text" id="cvc" name="cvc" placeholder="123" required />
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:100%; font-size:1.05rem; padding:.7rem;">
+      Subscribe for ${{ "%.2f"|format(price) }}/month
+    </button>
+  </form>
+
+  <p style="font-size:.8rem; margin-top:1rem; color:var(--muted);">
+    🔒 Secure checkout &bull; You will be charged ${{ "%.2f"|format(price) }} today and monthly thereafter. Cancel any time from your account page.
+  </p>
+</div>
+{% endblock %}

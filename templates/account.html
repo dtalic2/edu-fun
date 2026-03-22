@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}My Account – EduFun{% endblock %}
+
+{% block content %}
+<h1>My Account</h1>
+
+<div class="account-grid" style="max-width:520px;">
+  <!-- Profile -->
+  <div class="card">
+    <div class="card-body">
+      <h2>Profile</h2>
+      <div class="stat-row"><span>Username</span><strong>{{ user.username }}</strong></div>
+      <div class="stat-row"><span>Email</span><strong>{{ user.email }}</strong></div>
+      <div class="stat-row"><span>Member since</span><strong>{{ user.created_at.strftime("%B %d, %Y") }}</strong></div>
+    </div>
+  </div>
+
+  <!-- Subscription -->
+  <div class="card">
+    <div class="card-body">
+      <h2>Subscription</h2>
+      {% if user.is_subscribed %}
+        <div class="stat-row"><span>Status</span><span class="tag-active">Active</span></div>
+        <div class="stat-row"><span>Plan</span><strong>${{ "%.2f"|format(price) }}/month</strong></div>
+        <div class="stat-row"><span>Started</span><strong>{{ user.subscription.started_at.strftime("%B %d, %Y") }}</strong></div>
+        <div class="stat-row"><span>Renews</span><strong>{{ user.subscription.expires_at.strftime("%B %d, %Y") }}</strong></div>
+        <div style="margin-top:1rem;">
+          <form method="POST" action="{{ url_for('cancel_subscription') }}" onsubmit="return confirm('Cancel your subscription?');">
+            <button type="submit" class="btn btn-danger btn-sm">Cancel Subscription</button>
+          </form>
+        </div>
+      {% else %}
+        <div class="stat-row"><span>Status</span><span class="tag-inactive">No active subscription</span></div>
+        <div style="margin-top:1rem;">
+          <a href="{{ url_for('subscribe') }}" class="btn btn-primary">Subscribe for ${{ "%.2f"|format(price) }}/month</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Quick links -->
+  <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+    <a href="{{ url_for('browse') }}" class="btn btn-outline">Browse Videos</a>
+    <a href="{{ url_for('logout') }}" class="btn btn-outline" style="color:var(--danger); border-color:var(--danger);">Log Out</a>
+  </div>
+</div>
+{% endblock %}

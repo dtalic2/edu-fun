@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}EduFun{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --accent: #f59e0b;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --radius: 10px;
+    }
+
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+    /* Nav */
+    nav { background: var(--primary); color: #fff; padding: .75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
+    nav .brand { font-size: 1.4rem; font-weight: 700; text-decoration: none; color: #fff; letter-spacing: -0.5px; }
+    nav .brand span { color: var(--accent); }
+    nav .nav-links { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    nav .nav-links a { color: #fff; text-decoration: none; font-size: .9rem; opacity: .9; }
+    nav .nav-links a:hover { opacity: 1; text-decoration: underline; }
+    nav .btn-nav { background: var(--accent); color: #1e293b !important; padding: .35rem .9rem; border-radius: 6px; font-weight: 600; }
+
+    /* Alerts */
+    .alerts { max-width: 960px; margin: 1rem auto 0; padding: 0 1rem; }
+    .alert { padding: .75rem 1rem; border-radius: var(--radius); margin-bottom: .5rem; font-size: .9rem; }
+    .alert-success { background: #d1fae5; color: #065f46; }
+    .alert-danger  { background: #fee2e2; color: #991b1b; }
+    .alert-warning { background: #fef3c7; color: #92400e; }
+    .alert-info    { background: #dbeafe; color: #1e40af; }
+
+    /* Layout */
+    main { max-width: 960px; margin: 1.5rem auto 3rem; padding: 0 1rem; }
+    h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: .5rem; }
+    h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: .75rem; }
+    p  { color: var(--muted); }
+
+    /* Buttons */
+    .btn { display: inline-block; padding: .5rem 1.2rem; border-radius: 7px; font-weight: 600; text-decoration: none; border: none; cursor: pointer; font-size: .95rem; transition: opacity .15s; }
+    .btn:hover { opacity: .88; }
+    .btn-primary  { background: var(--primary); color: #fff; }
+    .btn-accent   { background: var(--accent);  color: #1e293b; }
+    .btn-outline  { border: 2px solid var(--primary); color: var(--primary); background: transparent; }
+    .btn-danger   { background: var(--danger); color: #fff; }
+    .btn-sm       { padding: .3rem .8rem; font-size: .85rem; }
+
+    /* Cards */
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .card-body { padding: 1rem; }
+
+    /* Video grid */
+    .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.2rem; }
+    .video-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: box-shadow .2s; }
+    .video-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    .video-card .thumb { width: 100%; aspect-ratio: 16/9; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; }
+    .video-card .info { padding: .75rem; }
+    .video-card .title { font-weight: 600; font-size: .95rem; margin-bottom: .25rem; }
+    .video-card .meta  { font-size: .8rem; color: var(--muted); }
+    .video-card .badge { display: inline-block; font-size: .7rem; padding: .1rem .4rem; border-radius: 4px; background: #e0e7ff; color: var(--primary); font-weight: 600; }
+    .lock-badge { background: #fef3c7; color: #92400e; }
+
+    /* Forms */
+    .form-card { max-width: 440px; margin: 2rem auto; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; }
+    .form-group { margin-bottom: 1.1rem; }
+    label { display: block; font-weight: 600; font-size: .9rem; margin-bottom: .3rem; }
+    input[type=text], input[type=email], input[type=password] {
+      width: 100%; padding: .55rem .8rem; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; outline: none;
+    }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px #e0e7ff; }
+    .form-footer { text-align: center; margin-top: 1rem; font-size: .9rem; color: var(--muted); }
+
+    /* Hero */
+    .hero { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; padding: 3.5rem 1.5rem; border-radius: var(--radius); text-align: center; margin-bottom: 2rem; }
+    .hero h1 { color: #fff; font-size: 2.2rem; }
+    .hero p  { color: #c7d2fe; font-size: 1.1rem; margin: .75rem 0 1.5rem; }
+
+    /* Level chips */
+    .level-chips { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.5rem; }
+    .level-chip { padding: .35rem .9rem; border-radius: 20px; border: 2px solid var(--border); font-size: .85rem; cursor: pointer; text-decoration: none; color: var(--text); background: var(--card-bg); }
+    .level-chip:hover, .level-chip.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+    /* Pricing */
+    .pricing-card { max-width: 380px; margin: 0 auto; text-align: center; background: var(--card-bg); border: 2px solid var(--primary); border-radius: var(--radius); padding: 2rem; }
+    .pricing-card .price-big { font-size: 3rem; font-weight: 800; color: var(--primary); }
+    .pricing-card .price-sub { color: var(--muted); margin-bottom: 1.2rem; }
+    .pricing-card ul { text-align: left; list-style: none; margin-bottom: 1.5rem; }
+    .pricing-card ul li::before { content: "✓ "; color: var(--success); font-weight: 700; }
+    .pricing-card ul li { padding: .3rem 0; }
+
+    /* Account */
+    .account-grid { display: grid; gap: 1.2rem; }
+    .stat-row { display: flex; justify-content: space-between; padding: .5rem 0; border-bottom: 1px solid var(--border); font-size: .95rem; }
+    .stat-row:last-child { border: none; }
+    .tag-active   { color: var(--success); font-weight: 700; }
+    .tag-inactive { color: var(--danger);  font-weight: 700; }
+
+    footer { text-align: center; color: var(--muted); font-size: .85rem; padding: 2rem 1rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="{{ url_for('index') }}">Edu<span>Fun</span></a>
+  <div class="nav-links">
+    <a href="{{ url_for('browse') }}">Browse</a>
+    {% if current_user %}
+      <a href="{{ url_for('account') }}">Account</a>
+      <a href="{{ url_for('logout') }}">Log out</a>
+      {% if not current_user.is_subscribed %}
+        <a href="{{ url_for('subscribe') }}" class="btn-nav">Subscribe $0.99/mo</a>
+      {% endif %}
+    {% else %}
+      <a href="{{ url_for('login') }}">Log in</a>
+      <a href="{{ url_for('register') }}" class="btn-nav">Sign up free</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="alerts">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  &copy; {{ 2026 }} EduFun &mdash; Educational videos for every level &bull; ${{ "%.2f"|format(0.99) }}/month
+</footer>
+
+</body>
+</html>

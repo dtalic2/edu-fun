@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ video.title }} – EduFun{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:.75rem;">
+  <a href="{{ url_for('browse', level=video.level) }}" style="color:var(--primary); text-decoration:none;">← Back to {{ video.grade_label }}</a>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 280px; gap:1.5rem;">
+  <div>
+    <!-- Player -->
+    <div style="background:linear-gradient(135deg,#1e293b,#0f172a); border-radius:var(--radius); aspect-ratio:16/9; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; text-align:center; padding:1.5rem; margin-bottom:1rem;">
+      {% if can_watch %}
+        <div style="font-size:5rem; margin-bottom:1rem;">
+          {% if video.subject == "Math" %}🔢
+          {% elif video.subject == "Science" %}🔬
+          {% elif video.subject == "History" %}📜
+          {% elif video.subject == "Language Arts" %}📖
+          {% elif video.subject == "Computer Science" %}💻
+          {% elif video.subject == "Economics" %}📊
+          {% elif video.subject == "Psychology" %}🧠
+          {% else %}🎓
+          {% endif %}
+        </div>
+        <p style="color:#94a3b8; font-size:.95rem;">▶ Video player would appear here with actual video content.</p>
+        <p style="color:#64748b; font-size:.85rem; margin-top:.5rem;">Duration: {{ video.duration_minutes }} minutes</p>
+      {% else %}
+        <div style="font-size:3rem; margin-bottom:1rem;">🔒</div>
+        <h2 style="color:#fff; margin-bottom:.5rem;">Subscribe to Watch</h2>
+        <p style="color:#94a3b8; margin-bottom:1rem;">Unlock all {{ video.grade_label }} videos for just $0.99/month.</p>
+        {% if current_user %}
+          <a href="{{ url_for('subscribe') }}" class="btn btn-accent">Subscribe Now – $0.99/mo</a>
+        {% else %}
+          <a href="{{ url_for('register') }}" class="btn btn-accent">Sign Up to Watch</a>
+          <a href="{{ url_for('login') }}" class="btn btn-outline" style="margin-left:.75rem; border-color:#fff; color:#fff;">Log In</a>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <h1>{{ video.title }}</h1>
+    <div style="display:flex; gap:.5rem; margin:.5rem 0 1rem; flex-wrap:wrap;">
+      <span class="badge">{{ video.subject }}</span>
+      <span class="badge" style="background:#f1f5f9; color:var(--muted);">{{ video.grade_label }}</span>
+      <span class="badge" style="background:#f1f5f9; color:var(--muted);">{{ video.duration_minutes }} min</span>
+      {% if video.free_preview %}
+        <span class="badge" style="background:#d1fae5;color:#065f46;">FREE PREVIEW</span>
+      {% endif %}
+    </div>
+
+    <p>{{ video.description }}</p>
+  </div>
+
+  <!-- Sidebar: related videos -->
+  <div>
+    <h2>More {{ video.grade_label }} Videos</h2>
+    {% for v in related %}
+    <div style="display:flex; gap:.6rem; margin-bottom:.8rem;">
+      <div style="width:56px; height:40px; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">
+        {% if v.subject == "Math" %}🔢{% elif v.subject == "Science" %}🔬{% elif v.subject == "History" %}📜{% else %}🎓{% endif %}
+      </div>
+      <div>
+        <a href="{{ url_for('video_detail', video_id=v.id) }}" style="font-size:.85rem; font-weight:600; color:var(--text); text-decoration:none;">{{ v.title }}</a>
+        <div style="font-size:.75rem; color:var(--muted);">{{ v.duration_minutes }} min</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% if not related %}
+      <p style="font-size:.85rem;">No other videos in this level yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

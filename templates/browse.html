@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Browse Videos – EduFun{% endblock %}
+
+{% block content %}
+<h1>Browse Videos</h1>
+<p style="margin-bottom:1.2rem;">{{ videos|length }} video{% if videos|length != 1 %}s{% endif %} available</p>
+
+<div class="level-chips">
+  <a href="{{ url_for('browse') }}" class="level-chip {% if not current_level %}active{% endif %}">All Levels</a>
+  {% for lvl in all_levels %}
+    <a href="{{ url_for('browse', level=lvl) }}" class="level-chip {% if current_level == lvl %}active{% endif %}">{{ lvl }}</a>
+  {% endfor %}
+</div>
+
+{% if not current_user or not current_user.is_subscribed %}
+<div class="alert alert-info" style="margin-bottom:1.2rem;">
+  🔒 Subscribe for <strong>$0.99/month</strong> to unlock all videos.
+  <a href="{{ url_for('subscribe') if current_user else url_for('register') }}" style="margin-left:.5rem; font-weight:700;">
+    {{ "Subscribe now" if current_user else "Sign up" }} →
+  </a>
+</div>
+{% endif %}
+
+<div class="video-grid">
+  {% for video in videos %}
+  <div class="video-card">
+    <a href="{{ url_for('video_detail', video_id=video.id) }}" style="text-decoration:none; color:inherit;">
+      <div class="thumb">
+        {% if video.subject == "Math" %}🔢
+        {% elif video.subject == "Science" %}🔬
+        {% elif video.subject == "History" %}📜
+        {% elif video.subject == "Language Arts" %}📖
+        {% elif video.subject == "Computer Science" %}💻
+        {% elif video.subject == "Economics" %}📊
+        {% elif video.subject == "Psychology" %}🧠
+        {% else %}🎓
+        {% endif %}
+      </div>
+      <div class="info">
+        <div class="title">{{ video.title }}</div>
+        <div class="meta">{{ video.grade_label }} &bull; {{ video.duration_minutes }} min</div>
+        <div style="margin-top:.4rem;">
+          <span class="badge">{{ video.subject }}</span>
+          {% if video.free_preview %}
+            <span class="badge" style="background:#d1fae5;color:#065f46;">FREE</span>
+          {% else %}
+            <span class="badge lock-badge">🔒 Premium</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+  </div>
+  {% else %}
+  <p style="color:var(--muted);">No videos found for this filter.</p>
+  {% endfor %}
+</div>
+{% endblock %}

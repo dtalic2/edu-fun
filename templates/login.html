@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Log In – EduFun{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <h1 style="text-align:center; margin-bottom:1.5rem;">Log In</h1>
+  <form method="POST">
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required autocomplete="email" />
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password" />
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:100%;">Log In</button>
+  </form>
+  <div class="form-footer">
+    Don't have an account? <a href="{{ url_for('register') }}">Sign up free</a>
+  </div>
+</div>
+{% endblock %}
