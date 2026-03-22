@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}My Channel – EduFun{% endblock %}
+
+{% block content %}
+<h1>My Channel</h1>
+
+{% if not user.channel %}
+<!-- Create channel form -->
+<div style="max-width:500px; margin-top:1.5rem;">
+  <p style="margin-bottom:1.5rem;">You don't have a channel yet. Create one to start sharing educational videos with the EduFun community!</p>
+  <div class="card">
+    <div class="card-body">
+      <h2>Create Your Channel</h2>
+      <form method="POST">
+        <input type="hidden" name="action" value="create_channel" />
+        <div class="form-group">
+          <label for="name">Channel Name</label>
+          <input type="text" id="name" name="name" placeholder="e.g. Ms. Smith's Math Class" required maxlength="120" />
+        </div>
+        <div class="form-group">
+          <label for="slug">Channel URL <small style="color:var(--muted);">(letters, numbers, hyphens)</small></label>
+          <div style="display:flex; align-items:center; gap:.5rem;">
+            <span style="color:var(--muted); font-size:.9rem;">edufun.com/channel/</span>
+            <input type="text" id="slug" name="slug" placeholder="ms-smiths-math" required minlength="3" maxlength="80"
+                   pattern="[a-z0-9\-]+" style="flex:1;" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="description">Description <small style="color:var(--muted);">(optional)</small></label>
+          <input type="text" id="description" name="description" placeholder="What's your channel about?" maxlength="300" />
+        </div>
+        <button type="submit" class="btn btn-primary">Create Channel</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<!-- Channel dashboard -->
+{% set channel = user.channel %}
+<div style="display:flex; gap:.75rem; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap;">
+  <div>
+    <span style="font-size:1.1rem; font-weight:700;">{{ channel.name }}</span>
+    <a href="{{ url_for('channel_detail', slug=channel.slug) }}" style="margin-left:.75rem; font-size:.85rem; color:var(--primary);">View public page →</a>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; max-width:800px;">
+
+  <!-- Upload video -->
+  <div class="card">
+    <div class="card-body">
+      <h2>Upload a Video</h2>
+      <p style="font-size:.85rem; margin-bottom:1rem;">Max length: <strong>{{ max_duration }} minutes</strong>.</p>
+      <form method="POST">
+        <input type="hidden" name="action" value="upload_video" />
+        <div class="form-group">
+          <label for="title">Video Title</label>
+          <input type="text" id="title" name="title" required maxlength="200" />
+        </div>
+        <div class="form-group">
+          <label for="v_description">Description</label>
+          <input type="text" id="v_description" name="description" maxlength="500" />
+        </div>
+        <div class="form-group">
+          <label for="level">Education Level</label>
+          <select id="level" name="level" required style="width:100%; padding:.55rem .8rem; border:1px solid var(--border); border-radius:6px; font-size:1rem;">
+            <option value="">Select level…</option>
+            <option value="K-2">Kindergarten – Grade 2</option>
+            <option value="3-5">Grades 3–5</option>
+            <option value="6-8">Grades 6–8</option>
+            <option value="9-12">Grades 9–12</option>
+            <option value="university">University</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="subject">Subject</label>
+          <input type="text" id="subject" name="subject" placeholder="Math, Science, History…" required maxlength="100" />
+        </div>
+        <div class="form-group">
+          <label for="duration_minutes">Duration (minutes, max {{ max_duration }})</label>
+          <input type="number" id="duration_minutes" name="duration_minutes" min="1" max="{{ max_duration }}" required
+                 style="width:100%; padding:.55rem .8rem; border:1px solid var(--border); border-radius:6px; font-size:1rem;" />
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:.5rem;">
+          <input type="checkbox" id="free_preview" name="free_preview" style="width:auto;" />
+          <label for="free_preview" style="margin:0; font-weight:normal;">Make this video free to watch (preview)</label>
+        </div>
+        <button type="submit" class="btn btn-primary">Publish Video</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Video list -->
+  <div>
+    <h2>Your Videos ({{ channel.video_count }})</h2>
+    {% for video in channel.videos.all() | sort(attribute='created_at', reverse=True) %}
+    <div style="display:flex; gap:.75rem; align-items:flex-start; padding:.75rem 0; border-bottom:1px solid var(--border);">
+      <div style="font-size:1.8rem; flex-shrink:0;">
+        {% if video.subject == "Math" %}🔢{% elif video.subject == "Science" %}🔬{% else %}🎓{% endif %}
+      </div>
+      <div style="flex:1; min-width:0;">
+        <a href="{{ url_for('video_detail', video_id=video.id) }}" style="font-weight:600; font-size:.9rem; color:var(--text); text-decoration:none;">{{ video.title }}</a>
+        <div style="font-size:.8rem; color:var(--muted);">{{ video.duration_minutes }} min &bull; {{ video.grade_label }}
+          {% if video.free_preview %}<span style="color:var(--success); font-weight:600;"> · FREE</span>{% endif %}
+        </div>
+      </div>
+      <form method="POST" action="{{ url_for('delete_channel_video', video_id=video.id) }}"
+            onsubmit="return confirm('Delete this video?');" style="flex-shrink:0;">
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      </form>
+    </div>
+    {% else %}
+    <p style="color:var(--muted); font-size:.9rem;">No videos yet. Upload your first video!</p>
+    {% endfor %}
+  </div>
+
+</div>
+{% endif %}
+{% endblock %}

@@ -1,7 +1,7 @@
 """Tests for the EduFun web application."""
 
 import pytest
-from app import app as flask_app, db, User, Subscription, Video, SEED_VIDEOS, seed_videos
+from app import app as flask_app, db, User, Subscription, Video, Channel, SEED_VIDEOS, seed_videos, MAX_VIDEO_DURATION_MINUTES
 from datetime import datetime, timedelta
 
 
@@ -213,3 +213,137 @@ def test_account_page(client, registered_user):
     r = client.get("/account")
     assert r.status_code == 200
     assert b"testuser" in r.data
+
+
+# ---------------------------------------------------------------------------
+# Channel tests
+# ---------------------------------------------------------------------------
+
+def test_channels_list_page(client):
+    r = client.get("/channels")
+    assert r.status_code == 200
+    assert b"Channels" in r.data
+
+
+def test_my_channel_requires_login(client):
+    r = client.get("/my-channel", follow_redirects=True)
+    assert b"log in" in r.data.lower()
+
+
+def test_my_channel_requires_subscription(client, registered_user):
+    login(client)
+    r = client.get("/my-channel", follow_redirects=True)
+    assert b"subscription" in r.data.lower()
+
+
+def test_create_channel(client, app, subscribed_user):
+    login(client)
+    r = client.post("/my-channel", data={
+        "action": "create_channel",
+        "name": "Test Math Channel",
+        "slug": "test-math",
+        "description": "A great math channel",
+    }, follow_redirects=True)
+    assert r.status_code == 200
+    assert b"created" in r.data.lower()
+    with app.app_context():
+        ch = Channel.query.filter_by(slug="test-math").first()
+        assert ch is not None
+        assert ch.name == "Test Math Channel"
+
+
+def test_create_channel_duplicate_slug(client, app, subscribed_user):
+    login(client)
+    client.post("/my-channel", data={
+        "action": "create_channel",
+        "name": "First Channel",
+        "slug": "my-slug",
+    }, follow_redirects=True)
+    r = client.post("/my-channel", data={
+        "action": "create_channel",
+        "name": "Second Channel",
+        "slug": "my-slug",
+    }, follow_redirects=True)
+    assert b"already taken" in r.data
+
+
+def test_upload_video_within_limit(client, app, subscribed_user):
+    login(client)
+    # First create channel
+    client.post("/my-channel", data={
+        "action": "create_channel",
+        "name": "My Channel",
+        "slug": "my-channel-slug",
+    }, follow_redirects=True)
+    r = client.post("/my-channel", data={
+        "action": "upload_video",
+        "title": "Quick Math Lesson",
+        "description": "A short video",
+        "level": "6-8",
+        "subject": "Math",
+        "duration_minutes": str(MAX_VIDEO_DURATION_MINUTES),
+    }, follow_redirects=True)
+    assert b"published" in r.data.lower()
+    with app.app_context():
+        v = Video.query.filter_by(title="Quick Math Lesson").first()
+        assert v is not None
+        assert v.duration_minutes == MAX_VIDEO_DURATION_MINUTES
+
+
+def test_upload_video_exceeds_limit(client, app, subscribed_user):
+    login(client)
+    client.post("/my-channel", data={
+        "action": "create_channel",
+        "name": "Over Limit Chan",
+        "slug": "over-limit",
+    }, follow_redirects=True)
+    r = client.post("/my-channel", data={
+        "action": "upload_video",
+        "title": "Too Long Video",
+        "description": "",
+        "level": "9-12",
+        "subject": "Science",
+        "duration_minutes": str(MAX_VIDEO_DURATION_MINUTES + 1),
+    }, follow_redirects=True)
+    assert b"minutes or shorter" in r.data
+    with app.app_context():
+        assert Video.query.filter_by(title="Too Long Video").first() is None
+
+
+def test_channel_detail_page(client, app, subscribed_user):
+    login(client)
+    client.post("/my-channel", data={
+        "action": "create_channel",
+        "name": "Public Channel",
+        "slug": "public-channel",
+    }, follow_redirects=True)
+    r = client.get("/channel/public-channel")
+    assert r.status_code == 200
+    assert b"Public Channel" in r.data
+
+
+def test_delete_own_video(client, app, subscribed_user):
+    login(client)
+    client.post("/my-channel", data={
+        "action": "create_channel",
+        "name": "Del Channel",
+        "slug": "del-channel",
+    }, follow_redirects=True)
+    client.post("/my-channel", data={
+        "action": "upload_video",
+        "title": "To Delete",
+        "level": "K-2",
+        "subject": "Math",
+        "duration_minutes": "5",
+    }, follow_redirects=True)
+    with app.app_context():
+        v = Video.query.filter_by(title="To Delete").first()
+        vid_id = v.id
+    r = client.post(f"/my-channel/delete-video/{vid_id}", follow_redirects=True)
+    assert b"deleted" in r.data.lower()
+    with app.app_context():
+        assert Video.query.get(vid_id) is None
+
+
+def test_max_video_duration_constant():
+    assert MAX_VIDEO_DURATION_MINUTES == 10

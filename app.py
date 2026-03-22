@@ -1,6 +1,7 @@
 """
 EduFun - Educational Video Streaming Platform
 A subscription-based app ($0.99/month) with videos for K-12 and University students.
+Supports creator channels: any subscriber can start a channel and upload videos (max 10 min).
 """
 
 from flask import Flask, render_template, redirect, url_for, request, flash, session
@@ -18,6 +19,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 SUBSCRIPTION_PRICE = 0.99  # USD per month
+MAX_VIDEO_DURATION_MINUTES = 10  # Creator-uploaded video limit
 
 
 # ---------------------------------------------------------------------------
@@ -31,6 +33,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     subscription = db.relationship("Subscription", backref="user", uselist=False)
+    channel = db.relationship("Channel", backref="owner", uselist=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -63,6 +66,22 @@ class Subscription(db.Model):
         return datetime.utcnow() < self.expires_at
 
 
+class Channel(db.Model):
+    """A creator channel owned by one user."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, unique=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    slug = db.Column(db.String(80), unique=True, nullable=False)  # URL-friendly name
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    videos = db.relationship("Video", backref="channel", lazy="dynamic",
+                             foreign_keys="Video.channel_id")
+
+    @property
+    def video_count(self):
+        return self.videos.count()
+
+
 class Video(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -74,7 +93,13 @@ class Video(db.Model):
     subject = db.Column(db.String(100))     # Math, Science, History, etc.
     grade_label = db.Column(db.String(50))  # Display label
     free_preview = db.Column(db.Boolean, default=False)
+    # Creator channel videos
+    channel_id = db.Column(db.Integer, db.ForeignKey("channel.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def is_creator_video(self):
+        return self.channel_id is not None
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +332,123 @@ def logout():
     session.pop("user_id", None)
     flash("You have been logged out.", "info")
     return redirect(url_for("index"))
+
+
+# ---------------------------------------------------------------------------
+# Channel routes
+# ---------------------------------------------------------------------------
+
+@app.route("/channels")
+def channels_list():
+    channels = Channel.query.order_by(Channel.created_at.desc()).all()
+    return render_template("channels.html", channels=channels)
+
+
+@app.route("/channel/<slug>")
+def channel_detail(slug):
+    channel = Channel.query.filter_by(slug=slug).first_or_404()
+    user = current_user()
+    can_watch = user and user.is_subscribed
+    videos = channel.videos.order_by(Video.created_at.desc()).all()
+    return render_template("channel.html", channel=channel, videos=videos, can_watch=can_watch)
+
+
+@app.route("/my-channel", methods=["GET", "POST"])
+@login_required
+def my_channel():
+    user = current_user()
+    if not user.is_subscribed:
+        flash("You need an active subscription to create a channel.", "info")
+        return redirect(url_for("subscribe"))
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "create_channel":
+            name = request.form.get("name", "").strip()
+            description = request.form.get("description", "").strip()
+            slug_raw = request.form.get("slug", "").strip().lower()
+            slug = "".join(c if c.isalnum() or c == "-" else "-" for c in slug_raw).strip("-")
+
+            if not name or not slug:
+                flash("Channel name and URL slug are required.", "danger")
+            elif len(slug) < 3:
+                flash("Slug must be at least 3 characters.", "danger")
+            elif Channel.query.filter_by(slug=slug).first():
+                flash("That channel URL is already taken.", "danger")
+            else:
+                channel = Channel(user_id=user.id, name=name, description=description, slug=slug)
+                db.session.add(channel)
+                db.session.commit()
+                flash(f'Channel "{name}" created!', "success")
+                return redirect(url_for("my_channel"))
+
+        elif action == "upload_video":
+            channel = user.channel
+            if not channel:
+                flash("Create a channel first.", "danger")
+                return redirect(url_for("my_channel"))
+
+            title = request.form.get("title", "").strip()
+            description = request.form.get("description", "").strip()
+            level = request.form.get("level", "").strip()
+            subject = request.form.get("subject", "").strip()
+            duration_str = request.form.get("duration_minutes", "").strip()
+            free_preview = request.form.get("free_preview") == "on"
+
+            grade_labels = {
+                "K-2": "Kindergarten – Grade 2", "3-5": "Grades 3–5",
+                "6-8": "Grades 6–8", "9-12": "Grades 9–12", "university": "University",
+            }
+            valid_levels = list(grade_labels.keys())
+
+            if not title or not level or not subject or not duration_str:
+                flash("Title, level, subject, and duration are required.", "danger")
+            elif level not in valid_levels:
+                flash("Please select a valid education level.", "danger")
+            else:
+                try:
+                    duration = int(duration_str)
+                except ValueError:
+                    flash("Duration must be a whole number of minutes.", "danger")
+                    return redirect(url_for("my_channel"))
+
+                if duration < 1:
+                    flash("Duration must be at least 1 minute.", "danger")
+                elif duration > MAX_VIDEO_DURATION_MINUTES:
+                    flash(f"Videos must be {MAX_VIDEO_DURATION_MINUTES} minutes or shorter.", "danger")
+                else:
+                    video = Video(
+                        title=title,
+                        description=description,
+                        level=level,
+                        subject=subject,
+                        grade_label=grade_labels[level],
+                        duration_minutes=duration,
+                        free_preview=free_preview,
+                        channel_id=channel.id,
+                    )
+                    db.session.add(video)
+                    db.session.commit()
+                    flash(f'Video "{title}" published!', "success")
+                    return redirect(url_for("my_channel"))
+
+    return render_template("my_channel.html", user=user,
+                           max_duration=MAX_VIDEO_DURATION_MINUTES)
+
+
+@app.route("/my-channel/delete-video/<int:video_id>", methods=["POST"])
+@login_required
+def delete_channel_video(video_id):
+    user = current_user()
+    video = db.get_or_404(Video, video_id)
+    if not user.channel or video.channel_id != user.channel.id:
+        flash("You can only delete your own videos.", "danger")
+        return redirect(url_for("my_channel"))
+    db.session.delete(video)
+    db.session.commit()
+    flash("Video deleted.", "info")
+    return redirect(url_for("my_channel"))
 
 
 # ---------------------------------------------------------------------------

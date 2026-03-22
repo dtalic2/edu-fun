@@ -116,7 +116,11 @@
   <a class="brand" href="{{ url_for('index') }}">Edu<span>Fun</span></a>
   <div class="nav-links">
     <a href="{{ url_for('browse') }}">Browse</a>
+    <a href="{{ url_for('channels_list') }}">Channels</a>
     {% if current_user %}
+      {% if current_user.is_subscribed %}
+        <a href="{{ url_for('my_channel') }}">My Channel</a>
+      {% endif %}
       <a href="{{ url_for('account') }}">Account</a>
       <a href="{{ url_for('logout') }}">Log out</a>
       {% if not current_user.is_subscribed %}

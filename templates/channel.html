@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ channel.name }} – EduFun{% endblock %}
+
+{% block content %}
+<!-- Channel header -->
+<div style="background:linear-gradient(135deg,var(--primary),var(--primary-dark)); border-radius:var(--radius); padding:2rem; color:#fff; margin-bottom:1.5rem; display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
+  <div style="font-size:4rem; flex-shrink:0;">🎓</div>
+  <div>
+    <h1 style="color:#fff; margin-bottom:.25rem;">{{ channel.name }}</h1>
+    <div style="color:#c7d2fe; font-size:.9rem;">by {{ channel.owner.username }} &bull; {{ channel.video_count }} video{% if channel.video_count != 1 %}s{% endif %} &bull; since {{ channel.created_at.strftime("%B %Y") }}</div>
+    {% if channel.description %}
+      <p style="color:#c7d2fe; margin-top:.5rem;">{{ channel.description }}</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if not can_watch and videos %}
+<div class="alert alert-info" style="margin-bottom:1.2rem;">
+  🔒 Subscribe for <strong>$0.99/month</strong> to watch all channel videos.
+  <a href="{{ url_for('subscribe') if current_user else url_for('register') }}" style="margin-left:.5rem; font-weight:700;">
+    {{ "Subscribe now" if current_user else "Sign up" }} →
+  </a>
+</div>
+{% endif %}
+
+{% if videos %}
+<div class="video-grid">
+  {% for video in videos %}
+  <div class="video-card">
+    <a href="{{ url_for('video_detail', video_id=video.id) }}" style="text-decoration:none; color:inherit;">
+      <div class="thumb">
+        {% if video.subject == "Math" %}🔢
+        {% elif video.subject == "Science" %}🔬
+        {% elif video.subject == "History" %}📜
+        {% elif video.subject == "Language Arts" %}📖
+        {% elif video.subject == "Computer Science" %}💻
+        {% elif video.subject == "Economics" %}📊
+        {% elif video.subject == "Psychology" %}🧠
+        {% else %}🎓
+        {% endif %}
+      </div>
+      <div class="info">
+        <div class="title">{{ video.title }}</div>
+        <div class="meta">{{ video.grade_label }} &bull; {{ video.duration_minutes }} min</div>
+        <div style="margin-top:.4rem;">
+          <span class="badge">{{ video.subject }}</span>
+          {% if video.free_preview %}
+            <span class="badge" style="background:#d1fae5;color:#065f46;">FREE</span>
+          {% else %}
+            <span class="badge lock-badge">🔒 Premium</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div style="text-align:center; padding:2.5rem; color:var(--muted);">
+  <div style="font-size:2.5rem; margin-bottom:.75rem;">📭</div>
+  <p>No videos uploaded to this channel yet.</p>
+</div>
+{% endif %}
+{% endblock %}
