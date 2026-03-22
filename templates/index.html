@@ -15,6 +15,8 @@
   {% endif %}
 </div>
 
+{% include 'ad_banner.html' %}
+
 <!-- Education levels -->
 <h2>Browse by Level</h2>
 <div class="level-chips" style="margin-bottom:2rem;">
@@ -55,6 +57,42 @@
   </div>
   {% endfor %}
 </div>
+
+<!-- Personalized recommendations -->
+{% if current_user and recommendations %}
+<div style="margin-top:2.5rem;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.75rem;">
+    <h2>Recommended for You</h2>
+    <a href="{{ url_for('recommendations_page') }}" style="font-size:.85rem; color:var(--primary);">See all →</a>
+  </div>
+  {% if not current_user.is_subscribed %}
+  <div class="alert alert-info" style="margin-bottom:1rem;">
+    🔒 Subscribe for <strong>$0.99/month</strong> to watch all recommended videos.
+    <a href="{{ url_for('subscribe') }}" style="margin-left:.5rem; font-weight:700;">Subscribe now →</a>
+  </div>
+  {% endif %}
+  <div class="video-grid">
+    {% for video in recommendations %}
+    <div class="video-card">
+      <a href="{{ url_for('video_detail', video_id=video.id) }}" style="text-decoration:none; color:inherit;">
+        <div class="thumb">
+          {% if video.subject == "Math" %}🔢{% elif video.subject == "Science" %}🔬{% elif video.subject == "History" %}📜{% elif video.subject == "Language Arts" %}📖{% elif video.subject == "Computer Science" %}💻{% elif video.subject == "Economics" %}📊{% elif video.subject == "Psychology" %}🧠{% else %}🎓{% endif %}
+        </div>
+        <div class="info">
+          <div class="title">{{ video.title }}</div>
+          <div class="meta">{{ video.grade_label }} · {{ video.duration_minutes }} min</div>
+          <div style="margin-top:.4rem;">
+            <span class="badge">{{ video.subject }}</span>
+            {% if video.free_preview %}<span class="badge" style="background:#d1fae5;color:#065f46;">FREE</span>
+            {% else %}<span class="badge lock-badge">🔒 Premium</span>{% endif %}
+          </div>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <!-- Value prop -->
 <div style="margin-top:3rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1.2rem; text-align:center;">

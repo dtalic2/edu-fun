@@ -117,7 +117,9 @@
   <div class="nav-links">
     <a href="{{ url_for('browse') }}">Browse</a>
     <a href="{{ url_for('channels_list') }}">Channels</a>
+    <a href="{{ url_for('advertise') }}">Advertise</a>
     {% if current_user %}
+      <a href="{{ url_for('recommendations_page') }}">For You</a>
       {% if current_user.is_subscribed %}
         <a href="{{ url_for('my_channel') }}">My Channel</a>
       {% endif %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Advertise on EduFun{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div style="background:linear-gradient(135deg,#f59e0b,#d97706); border-radius:var(--radius); padding:2.5rem; color:#fff; text-align:center; margin-bottom:2rem;">
+  <h1 style="color:#fff; font-size:2rem;">Reach Engaged Learners</h1>
+  <p style="color:#fef3c7; font-size:1.05rem; margin:.75rem 0 0;">
+    {{ total_impressions | default(0) }} ad impressions served and growing. Target K-12 students, parents, and university learners.
+  </p>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; align-items:start;">
+
+  <!-- Ad submission form -->
+  <div class="card">
+    <div class="card-body">
+      <h2>Create an Ad Campaign</h2>
+      <p style="font-size:.85rem; margin-bottom:1.25rem;">Pay only for impressions. Minimum budget: <strong>$10</strong>. Default $0.05/impression.</p>
+      <form method="POST">
+        <div class="form-group">
+          <label>Company Name</label>
+          <input type="text" name="company_name" required maxlength="120" placeholder="Acme Learning Co." />
+        </div>
+        <div class="form-group">
+          <label>Ad Headline</label>
+          <input type="text" name="headline" required maxlength="200" placeholder="Learn Anything, Anywhere" />
+        </div>
+        <div class="form-group">
+          <label>Body Text <small style="color:var(--muted);">(optional)</small></label>
+          <input type="text" name="body" maxlength="400" placeholder="Short description of your product or service." />
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+          <div class="form-group">
+            <label>CTA Button Text</label>
+            <input type="text" name="cta_text" maxlength="60" placeholder="Learn More" value="Learn More" />
+          </div>
+          <div class="form-group">
+            <label>CTA URL</label>
+            <input type="text" name="cta_url" maxlength="500" placeholder="https://yoursite.com" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Target Education Levels <small style="color:var(--muted);">(leave blank for all)</small></label>
+          <div style="display:flex; flex-wrap:wrap; gap:.5rem;">
+            {% for lvl in ["K-2","3-5","6-8","9-12","university"] %}
+            <label style="display:flex; align-items:center; gap:.3rem; font-weight:normal; cursor:pointer;">
+              <input type="checkbox" name="target_levels" value="{{ lvl }}" style="width:auto;" />
+              {{ lvl }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+          <div class="form-group">
+            <label>Total Budget (USD)</label>
+            <input type="number" name="budget_usd" min="10" step="0.01" required placeholder="100.00" />
+          </div>
+          <div class="form-group">
+            <label>Cost per Impression ($)</label>
+            <input type="number" name="cost_per_impression" min="0.01" step="0.01" value="0.05" placeholder="0.05" />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-accent" style="width:100%;">Launch Ad Campaign</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Why advertise -->
+  <div>
+    <h2>Why Advertise on EduFun?</h2>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-body">
+        <div style="font-size:1.5rem; margin-bottom:.5rem;">🎯</div>
+        <strong>Highly Targeted</strong>
+        <p style="font-size:.85rem;">Choose which grade levels see your ads — from kindergarteners to university students.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-body">
+        <div style="font-size:1.5rem; margin-bottom:.5rem;">💰</div>
+        <strong>Pay Per Impression</strong>
+        <p style="font-size:.85rem;">Only pay when your ad is shown. Set your own budget and cost-per-impression.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-body">
+        <div style="font-size:1.5rem; margin-bottom:.5rem;">📊</div>
+        <strong>Live Reporting</strong>
+        <p style="font-size:.85rem;">Track impressions, spend, and remaining budget in real time.</p>
+      </div>
+    </div>
+
+    {% if active_ads %}
+    <h2 style="margin-top:1.5rem;">Active Campaigns</h2>
+    {% for a in active_ads %}
+    <div style="padding:.75rem; border:1px solid var(--border); border-radius:var(--radius); margin-bottom:.6rem; font-size:.85rem;">
+      <strong>{{ a.company_name }}</strong> — {{ a.headline }}
+      <div style="color:var(--muted); margin-top:.25rem;">
+        {{ a.impressions }} impressions · ${{ a.spend }} spent · ${{ a.budget_remaining }} remaining
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

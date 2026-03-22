@@ -102,6 +102,179 @@ class Video(db.Model):
         return self.channel_id is not None
 
 
+class WatchHistory(db.Model):
+    """Records each time a user watches a video — powers recommendations."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey("video.id"), nullable=False)
+    watched_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="watch_history")
+    video = db.relationship("Video", backref="watch_events")
+
+
+class Ad(db.Model):
+    """Sponsored ad paid for by a company to appear on EduFun."""
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(120), nullable=False)
+    headline = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.String(400))
+    cta_text = db.Column(db.String(60), default="Learn More")    # call-to-action
+    cta_url = db.Column(db.String(500))
+    target_levels = db.Column(db.String(200))  # comma-separated levels, empty = all
+    budget_usd = db.Column(db.Float, default=0.0)                # total spend budget
+    cost_per_impression = db.Column(db.Float, default=0.05)      # $ per view
+    impressions = db.Column(db.Integer, default=0)
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def spend(self):
+        return round(self.impressions * self.cost_per_impression, 2)
+
+    @property
+    def budget_remaining(self):
+        return max(0.0, round(self.budget_usd - self.spend, 2))
+
+    @property
+    def is_active(self):
+        return self.active and self.budget_remaining > 0
+
+
+SEED_ADS = [
+    {
+        "company_name": "Brilliant.org",
+        "headline": "Master Math and Science Interactively",
+        "body": "Thousands of guided problems in math, science, and computer science. Learn by doing.",
+        "cta_text": "Try Free",
+        "cta_url": "#",
+        "target_levels": "",
+        "budget_usd": 500.0,
+        "cost_per_impression": 0.05,
+    },
+    {
+        "company_name": "Khan Academy",
+        "headline": "Free World-Class Education for Everyone",
+        "body": "Practice exercises, videos, and a personalized learning dashboard — 100% free.",
+        "cta_text": "Start Learning",
+        "cta_url": "#",
+        "target_levels": "K-2,3-5,6-8",
+        "budget_usd": 300.0,
+        "cost_per_impression": 0.04,
+    },
+    {
+        "company_name": "Coursera",
+        "headline": "Earn University Certificates Online",
+        "body": "Take courses from top universities. Add credentials to your resume today.",
+        "cta_text": "Explore Courses",
+        "cta_url": "#",
+        "target_levels": "university",
+        "budget_usd": 400.0,
+        "cost_per_impression": 0.06,
+    },
+]
+
+
+def seed_ads():
+    if Ad.query.count() == 0:
+        for a in SEED_ADS:
+            db.session.add(Ad(**a))
+        db.session.commit()
+
+
+# ---------------------------------------------------------------------------
+# Recommendation helpers
+# ---------------------------------------------------------------------------
+
+def get_recommendations(user, limit=6):
+    """
+    Return recommended videos for a user based on their watch history.
+    Strategy:
+      1. Find the subjects and levels the user watches most.
+      2. Return unseen videos from those subjects/levels, newest first.
+      3. Fall back to free-preview videos if history is empty.
+    """
+    if user is None:
+        return Video.query.filter_by(free_preview=True).order_by(Video.created_at.desc()).limit(limit).all()
+
+    watched_ids = {wh.video_id for wh in user.watch_history}
+
+    if not watched_ids:
+        return Video.query.filter_by(free_preview=True).order_by(Video.created_at.desc()).limit(limit).all()
+
+    # Count subject and level frequency
+    from collections import Counter
+    subject_counts = Counter()
+    level_counts = Counter()
+    for wh in user.watch_history:
+        if wh.video:
+            subject_counts[wh.video.subject] += 1
+            level_counts[wh.video.level] += 1
+
+    top_subjects = [s for s, _ in subject_counts.most_common(3)]
+    top_levels = [l for l, _ in level_counts.most_common(2)]
+
+    # Preferred: same subject + same level
+    recs = (
+        Video.query
+        .filter(Video.id.notin_(watched_ids))
+        .filter(Video.subject.in_(top_subjects))
+        .filter(Video.level.in_(top_levels))
+        .order_by(Video.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    # Top up with same-subject videos if needed
+    if len(recs) < limit:
+        existing_ids = {v.id for v in recs} | watched_ids
+        more = (
+            Video.query
+            .filter(Video.id.notin_(existing_ids))
+            .filter(Video.subject.in_(top_subjects))
+            .order_by(Video.created_at.desc())
+            .limit(limit - len(recs))
+            .all()
+        )
+        recs += more
+
+    # Final fallback: newest unwatched videos
+    if len(recs) < limit:
+        existing_ids = {v.id for v in recs} | watched_ids
+        more = (
+            Video.query
+            .filter(Video.id.notin_(existing_ids))
+            .order_by(Video.created_at.desc())
+            .limit(limit - len(recs))
+            .all()
+        )
+        recs += more
+
+    return recs
+
+
+def get_ad_for_level(level=None):
+    """Return a random active ad targeting the given level (or any level)."""
+    import random
+    query = Ad.query.filter_by(active=True)
+    candidates = [
+        a for a in query.all()
+        if a.is_active and (
+            not a.target_levels or
+            not level or
+            level in (a.target_levels or "").split(",")
+        )
+    ]
+    return random.choice(candidates) if candidates else None
+
+
+def record_watch(user_id, video_id):
+    """Record a watch event and increment ad impression if applicable."""
+    if user_id:
+        db.session.add(WatchHistory(user_id=user_id, video_id=video_id))
+        db.session.commit()
+
+
 # ---------------------------------------------------------------------------
 # Auth helpers
 # ---------------------------------------------------------------------------
@@ -197,8 +370,12 @@ def index():
         {"key": "9-12",       "label": "Grades 9–12",            "icon": "🎓"},
         {"key": "university", "label": "University",             "icon": "🏛️"},
     ]
+    user = current_user()
     featured = Video.query.filter_by(free_preview=True).limit(4).all()
-    return render_template("index.html", levels=levels, featured=featured)
+    recommendations = get_recommendations(user, limit=6)
+    ad = get_ad_for_level()
+    return render_template("index.html", levels=levels, featured=featured,
+                           recommendations=recommendations, ad=ad)
 
 
 @app.route("/browse")
@@ -218,8 +395,14 @@ def video_detail(video_id):
     video = db.get_or_404(Video, video_id)
     user = current_user()
     can_watch = video.free_preview or (user and user.is_subscribed)
+    if can_watch and user:
+        record_watch(user.id, video.id)
     related = Video.query.filter_by(level=video.level).filter(Video.id != video.id).limit(4).all()
-    return render_template("video.html", video=video, can_watch=can_watch, related=related)
+    ad = get_ad_for_level(video.level)
+    if ad and ad.is_active:
+        ad.impressions += 1
+        db.session.commit()
+    return render_template("video.html", video=video, can_watch=can_watch, related=related, ad=ad)
 
 
 @app.route("/subscribe", methods=["GET", "POST"])
@@ -452,6 +635,67 @@ def delete_channel_video(video_id):
 
 
 # ---------------------------------------------------------------------------
+# Advertiser routes
+# ---------------------------------------------------------------------------
+
+@app.route("/advertise", methods=["GET", "POST"])
+def advertise():
+    """Self-serve ad purchase page for companies."""
+    if request.method == "POST":
+        company_name = request.form.get("company_name", "").strip()
+        headline = request.form.get("headline", "").strip()
+        body = request.form.get("body", "").strip()
+        cta_text = request.form.get("cta_text", "Learn More").strip()
+        cta_url = request.form.get("cta_url", "").strip()
+        target_levels = ",".join(request.form.getlist("target_levels"))
+        budget_str = request.form.get("budget_usd", "").strip()
+        cpi_str = request.form.get("cost_per_impression", "0.05").strip()
+
+        if not company_name or not headline or not budget_str:
+            flash("Company name, headline, and budget are required.", "danger")
+        else:
+            try:
+                budget = float(budget_str)
+                cpi = float(cpi_str)
+            except ValueError:
+                flash("Budget and cost-per-impression must be numbers.", "danger")
+                return redirect(url_for("advertise"))
+
+            if budget < 10:
+                flash("Minimum ad budget is $10.00.", "danger")
+            else:
+                ad = Ad(
+                    company_name=company_name,
+                    headline=headline,
+                    body=body,
+                    cta_text=cta_text or "Learn More",
+                    cta_url=cta_url,
+                    target_levels=target_levels,
+                    budget_usd=budget,
+                    cost_per_impression=cpi,
+                    active=True,
+                )
+                db.session.add(ad)
+                db.session.commit()
+                flash(f"Ad campaign created! Your ad will begin showing immediately.", "success")
+                return redirect(url_for("advertise"))
+
+    active_ads = Ad.query.filter_by(active=True).all()
+    total_impressions = sum(a.impressions for a in Ad.query.all())
+    return render_template("advertise.html", active_ads=active_ads, total_impressions=total_impressions)
+
+
+@app.route("/recommendations")
+@login_required
+def recommendations_page():
+    user = current_user()
+    recs = get_recommendations(user, limit=12)
+    ad = get_ad_for_level()
+    watched_count = len(user.watch_history)
+    return render_template("recommendations.html", recommendations=recs, ad=ad, watched_count=watched_count)
+
+
+# ---------------------------------------------------------------------------
 # App factory / init
 # ---------------------------------------------------------------------------
 
@@ -459,6 +703,7 @@ def create_app():
     with app.app_context():
         db.create_all()
         seed_videos()
+        seed_ads()
     return app
 
 

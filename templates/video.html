@@ -48,6 +48,18 @@
     </div>
 
     <p>{{ video.description }}</p>
+
+    {% include 'ad_banner.html' %}
+
+    {% if not current_user or not current_user.is_subscribed %}
+    <div style="background:linear-gradient(135deg,#4f46e5,#3730a3); border-radius:var(--radius); padding:1.5rem; color:#fff; margin-top:1rem; text-align:center;">
+      <div style="font-size:1.1rem; font-weight:700; margin-bottom:.4rem;">Unlock All Videos for $0.99/month</div>
+      <div style="color:#c7d2fe; font-size:.9rem; margin-bottom:1rem;">No commitment — cancel any time. Join thousands of learners on EduFun.</div>
+      <a href="{{ url_for('subscribe') if current_user else url_for('register') }}" class="btn btn-accent">
+        {{ "Subscribe Now" if current_user else "Sign Up Free" }}
+      </a>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Sidebar: related videos -->
